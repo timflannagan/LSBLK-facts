@@ -8,7 +8,7 @@ Purpose
 
 Commands
 ========
-$ ansible-playbook -i hosts site.yml --ask-sudo-pass
-$ ansible -m setup localhost "filter=ansible_local" 
+- $ ansible-playbook -i hosts site.yml --ask-sudo-pass
+- $ ansible -m setup localhost "filter=ansible_local" 
 or 
-$ ansible -m setup localhost | grep ansible_local
+- $ ansible -m setup localhost | grep ansible_local
