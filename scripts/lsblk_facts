@@ -1,0 +1,112 @@
+#!/usr/bin/python
+
+import json 
+import subprocess
+
+
+# Precondition: a block device str 
+# Postcondition: returns a list of dictionary entries
+def build_device(block_name):
+	print "Searching for {} children".format(block_name)
+	# Search for $PARAM device children 
+	ls_cmd = "ls /sys/block/{}/holders".format(block_name)
+	ls_buf = subprocess.check_output(ls_cmd, shell = True)
+
+	# Need to somehow tailor this to work with SDA and DM or just 
+	num_holders = ls_buf.split()
+	print "Block {} has {} children".format(block_name, num_holders)
+	for child in num_holders:
+		print child
+
+def build_block(sd_block_name):
+	print "Searching for {} block and its partitions".format(sd_block_name)
+	
+# Function that takes a SDA/SDB/SDZ partition and searching for a substring 
+# def find_partitions():
+
+
+if __name__ == "__main__":
+	ls_buf = subprocess.check_output("ls /sys/block/", shell = True)
+
+	# Initialize necessary variables
+	devices = ls_buf.split()
+	children_list = []
+
+	for device in devices:
+		if not device.find('sd'):
+			# If we found a disk drive, see if its has any children
+
+			# This could be an sda, sdb, ..., sdz
+			cmd = "ls -d /sys/block/sd*/device"
+			ls_out = subprocess.check_output(cmd, shell = True)
+			disks = ls_out.split()
+
+			for disk in disks:
+				disk.replace('/', '', 1)
+				print disk 
+
+		# else:
+			# build_device(devices) 
+
+cmd = "ls -l /dev/mapper/ | grep {} | awk '/{ print $9 }/'".format(dm_name)
+
+
+ 
+
+# name = 'sda'
+# cmd = "ls /sys/block/{}".format(name)
+# output = subprocess.check_output(cmd, shell = True)
+
+# words = output.split()
+# counter = 1
+
+# sda_children = []
+# sdb_children = []
+
+# # Might need a recursive solution
+# # Not sure what the base condition would be as wc -l might not suffice 
+# for word in words:
+# 	sda_sub = 'sda{}'.format(counter)
+
+# 	# Check if SDA has partition
+# 	if not word.find(sda_sub):
+# 		current_child = { 'name': None, 'children': [] }
+# 		# Add to child dict list, increment counter 
+# 		current_child['name'] = sda_sub
+# 		counter = counter + 1
+
+# 		# Find how many children this partition has 
+# 		cmd = "ls /sys/block/sda/{}/holders | wc -l".format(sda_sub)
+# 		num_holders = subprocess.check_output(cmd, shell = True)
+
+# 		# Check if we need to add to children list key
+# 		if num_holders < "1":
+# 			current_child['children'] = 'none'
+# 			sda_children.append(current_child)
+# 		else:
+# 			# Populate sda partition children
+# 			cmd = "ls /sys/block/sda/{}/holders".format(sda_sub)
+# 			buf = subprocess.check_output(cmd, shell = True)
+# 			children = buf.split()
+
+# 			# Traverse sdaX partition's children
+# 			for child in children:
+# 				new_child = { 'name': None, 'children': [] }
+
+# 				# Continue getting children
+# 				new_child['name'] = child
+# 				cmd = "ls /sys/class/block/{}/holders".format(child)
+# 				child_buf = subprocess.check_output(cmd, shell = True)
+# 				grand_child = child_buf.split()
+
+# 				# Check if 
+# 				for child in grand_child:
+# 					new_child['children'].append(child) 
+
+# 				current_child['children'].append(new_child)
+
+# 			sda_children.append(current_child)
+
+
+# for child in sda_children:
+# 	print child 

@@ -1,0 +1,110 @@
+#!/usr/bin/python
+
+import json 
+import subprocess
+import collections
+import StringIO
+
+# To-Do/Current Problems:
+# Test edge cases
+# Ansible is sorting the JSON table input alphabetically
+# |
+# |- could just rename the variables too 
+
+def find_dm_device(dict_list, parent_index, dm_name):
+	cmd = ("ls -l /dev/mapper/ | grep %s | awk '{ print $9 }'" % dm_name)
+	cmd_buf = subprocess.check_output(cmd, shell = True).replace('\n', '')
+
+	for entry in dict_list:
+		if entry['name'] == cmd_buf:
+			if 'children' in parent_index:
+				parent_index['children'].append(entry)
+
+			ls_cmd = "ls /sys/class/block/{}/holders".format(dm_name)
+			ls_buf = subprocess.check_output(ls_cmd, shell = True)
+			num_holders = ls_buf.split()
+
+			if num_holders != 0:
+				entry['children'] = []
+				for holder in num_holders:
+					find_dm_device(dict_list, entry, holder)
+
+def parse_file(fp):
+	for line in fp:
+		words = line.split()
+		current_dict = collections.OrderedDict()
+
+		for word in words:
+			if not word.find('NAME'):
+				current_dict['name'] = word[5:].replace('"', '')
+			elif not word.find('MAJ:MIN'):
+				current_dict['maj:min'] = word[8:].replace('"', '')
+			elif not word.find('RM'):
+				current_dict['rm'] = word[3:].replace('"', '')
+			elif not word.find('SIZE'):
+				current_dict['size'] = word[5:].replace('"', '')
+			elif not word.find('RO'):
+				current_dict['ro'] = word[3:].replace('"', '')
+			elif not word.find('TYPE'):
+				current_dict['type'] = word[5:].replace('"', '')
+			elif not word.find('MOUNTPOINT'):
+				current_dict['mountpoint'] = word[11:].replace('"', '')
+
+		single.append(current_dict)
+
+# Not sure how to do this without cubic complex.
+def build_hierarchy(overall, single):
+	# Traverse list of dictionary entries
+	for entry in single:
+		# Check if the device is a disk block, check for partitions, LVMs, etc.
+		if entry['type'] == 'disk':
+			overall['block_devices'].append(entry)
+			disk_name = entry['name']
+
+			# Check for directly mapped devices
+			ls_cmd = "ls /sys/block/{} | grep {}*".format(disk_name, disk_name)
+			ls_buf = subprocess.check_output(ls_cmd, shell = True)
+			children = ls_buf.split()
+
+			if len(children) != 0:
+				entry['children'] = []
+
+				# Iterate over holder directory
+				for child in children:
+					for index in single:
+						if index['name'] == child:
+							entry['children'].append(index)
+
+							# Need to check for grandchildren now 
+							ls_cmd = "ls /sys/class/block/{}/holders/".format(child)
+							ls_buf = subprocess.check_output(ls_cmd, shell = True)
+							buf = ls_buf.split()
+
+							# This is the dm problem now 
+							if len(buf) != 0:
+								index['children'] = []
+
+								for each in buf:
+									if not each.find('dm'):
+										find_dm_device(single, index, each)
+
+# Don't really need this if took better case of hierarchy method
+def remove_empty_children(list_dict):
+	for entry in list_dict:
+		if 'children' in entry:
+			if len(entry['children']) == 0:
+				entry.popitem('children')
+
+if __name__ == "__main__":
+	lsblk_cmd = subprocess.check_output('lsblk --pair', shell = True)
+	buf = StringIO.StringIO(lsblk_cmd)
+
+	# Initialize necessary variables
+	overall = { 'block_devices': [] }
+	single = []
+
+	parse_file(buf)
+	build_hierarchy(overall, single)
+	remove_empty_children(single)
+
+	print json.dumps(overall, indent = 3, separators = (',', ': '))
